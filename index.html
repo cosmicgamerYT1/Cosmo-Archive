@@ -684,22 +684,22 @@ footer{border-top:1px solid var(--bo);padding:44px 0;position:relative;z-index:1
   <div class="vbd">
     <div class="vfr" id="vfr">
       <div class="vldr" id="vld"><div class="vlring"></div><div style="font-size:14px;color:var(--ts)">Loading archived page&hellip;</div></div>
-      <div id="vcont" style="display:none;position:relative;min-height:100%">
-        <div class="ms">
-          <div class="msn"><div class="mslt" id="vsn">-</div><div style="display:flex;gap:18px"><span class="msnl">Home</span><span class="msnl">About</span></div></div>
-          <div class="msh"><h1 id="vht">Archived page</h1><p id="vhs">Captured snapshot.</p><span class="msc">Get Started</span></div>
-          <div class="msco">
-            <div class="mscd">
-              <div class="mscc"><div class="mscim" style="background:linear-gradient(135deg,#e0e7ff,#ddd6fe)"></div><h3>Feature One</h3><p>Preserved content from the archived page.</p></div>
-              <div class="mscc"><div class="mscim" style="background:linear-gradient(135deg,#d1fae5,#a7f3d0)"></div><h3>Feature Two</h3><p>All assets captured at time of archiving.</p></div>
-              <div class="mscc"><div class="mscim" style="background:linear-gradient(135deg,#fef3c7,#fde68a)"></div><h3>Feature Three</h3><p>Permanently accessible via stable URL.</p></div>
-            </div>
-            <div class="msar">
-              <div style="font-size:13px;color:#a1a1aa;margin-bottom:12px" id="vam">Archived &middot; Cosmo Archives</div>
-              <h2 id="vat">Preserved snapshot</h2>
-              <p>This content was captured and stored by Cosmo Archives. Use the timeline bar to navigate between snapshots.</p>
-            </div>
-          </div>
+      <div id="vcont" style="display:none;position:relative;width:100%;height:100%">
+        <!-- Real Wayback Machine iframe -->
+        <iframe id="waybackFrame"
+          style="width:100%;height:100%;border:none;display:block"
+          sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-top-navigation"
+          title="Archived page">
+        </iframe>
+        <!-- Fallback shown if iframe blocked -->
+        <div id="vcont-fallback" style="display:none;padding:48px 32px;text-align:center;background:#fff;height:100%">
+          <div style="font-size:40px;margin-bottom:16px">🌐</div>
+          <h2 style="font-size:20px;font-weight:700;color:#18181b;margin-bottom:10px" id="vat">Archived page</h2>
+          <p style="font-size:14px;color:#71717a;margin-bottom:24px" id="vam">This site blocks embedding. Open it directly in the Wayback Machine.</p>
+          <a id="waybackDirectLink" href="#" target="_blank" rel="noopener"
+            style="display:inline-flex;align-items:center;gap:8px;padding:11px 22px;background:#F59E0B;color:#000;font-weight:700;border-radius:8px;text-decoration:none;font-size:14px">
+            Open in Wayback Machine ↗
+          </a>
         </div>
         <div class="aob"><div class="aobd"></div><span id="vbt">Archived -</span></div>
       </div>
@@ -1301,42 +1301,117 @@ function runArchive(mode) {
 function openViewer(data) { VD=data; goTo('vv'); renderViewer(data); }
 
 function renderViewer(data) {
-  document.getElementById('vld').style.display='flex';
-  document.getElementById('vcont').style.display='none';
-  const url     = data.url||'https://example.com';
-  const ts      = data.ts||'20240101000000';
-  const domain  = data.domain||(function(){ try{return new URL(url).hostname;}catch(e){return url;} })();
-  const cleanUrl = url.replace(/^https?:\/\//,'');
-  const arcUrl  = data.archiveUrl||'https://cosmoarchives.com/web/'+ts+'/'+cleanUrl;
-  const friendly = ts.replace(/(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})/,'$3/$2/$1 $4:$5');
+  document.getElementById('vld').style.display = 'flex';
+  document.getElementById('vcont').style.display = 'none';
+  document.getElementById('vcont-fallback').style.display = 'none';
+  document.getElementById('waybackFrame').src = '';
+
+  const url      = data.url || 'https://example.com';
+  const ts       = data.ts  || '20240101000000';
+  const domain   = data.domain || (function(){ try{return new URL(url).hostname;}catch(e){return url;} })();
+  const cleanUrl = url.replace(/^https?:\/\//, '');
+  const arcUrl   = data.archiveUrl || 'https://cosmoarchives.com/web/'+ts+'/'+cleanUrl;
+  const friendly = ts.replace(/(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})/, '$3/$2/$1 $4:$5');
+
+  // Update top bar
   document.getElementById('vut').innerHTML   = 'cosmoarchives.com/web/<strong>'+ts+'</strong>/'+cleanUrl;
   document.getElementById('vsl').textContent = arcUrl;
-  document.title = domain+' — Cosmo Archives';
+  document.title = domain + ' — Cosmo Archives';
+
+  // Update sidebar metadata
   document.getElementById('vmc').textContent  = friendly;
   document.getElementById('vmd').textContent  = domain;
-  document.getElementById('vmsz').textContent = data.size||'1.2 MB';
-  document.getElementById('vmw').textContent  = (data.words||891).toLocaleString();
-  document.getElementById('vmp').textContent  = data.proc||'7.2 s';
-  document.getElementById('vai').textContent  = data.aiSummary||'Archived page from '+domain;
+  document.getElementById('vmsz').textContent = data.size  || '—';
+  document.getElementById('vmw').textContent  = data.words ? data.words.toLocaleString() : '—';
+  document.getElementById('vmp').textContent  = data.proc  || '—';
+  document.getElementById('vai').textContent  = data.aiSummary || 'Archived page from '+domain;
   document.getElementById('vbt').textContent  = 'Archived '+friendly+' UTC';
-  document.getElementById('vam').textContent  = 'Archived '+friendly+' · Cosmo Archives';
-  document.getElementById('vat').textContent  = 'Preserved snapshot of '+domain;
-  document.getElementById('vsn').textContent  = domain;
-  document.getElementById('vht').textContent  = domain+' — Archived '+ts.slice(0,4);
-  document.getElementById('vhs').textContent  = 'Captured '+friendly+'. You are viewing a preserved copy.';
-  const tw = document.getElementById('vmtch'); tw.innerHTML='';
-  (data.tech||['HTML','CSS','JavaScript']).forEach(function(t) {
-    const s=document.createElement('span'); s.className='tag'; s.textContent=t; tw.appendChild(s);
+
+  var tw = document.getElementById('vmtch'); tw.innerHTML = '';
+  (data.tech || []).forEach(function(t) {
+    var s = document.createElement('span'); s.className = 'tag'; s.textContent = t; tw.appendChild(s);
   });
-  const aw = document.getElementById('vatgs'); aw.innerHTML='';
-  (data.aiTags||['Web Archive','Public']).forEach(function(t) {
-    const s=document.createElement('span'); s.className='tag ai'; s.textContent=t; aw.appendChild(s);
+  var aw = document.getElementById('vatgs'); aw.innerHTML = '';
+  (data.aiTags || []).forEach(function(t) {
+    var s = document.createElement('span'); s.className = 'tag ai'; s.textContent = t; aw.appendChild(s);
   });
+
   buildVTl();
-  setTimeout(function() {
-    document.getElementById('vld').style.display='none';
-    document.getElementById('vcont').style.display='block';
-  }, 1400);
+
+  // ── Fetch real snapshot from Wayback Machine CDX API ──
+  var cdxUrl = 'https://archive.org/wayback/available?url=' + encodeURIComponent(url) + '&timestamp=' + ts;
+
+  fetch(cdxUrl)
+    .then(function(r) { return r.json(); })
+    .then(function(result) {
+      var snap = result && result.archived_snapshots && result.archived_snapshots.closest;
+      if (snap && snap.available && snap.url) {
+        var waybackUrl = snap.url;
+        // Store for direct link fallback
+        document.getElementById('waybackDirectLink').href = waybackUrl;
+        document.getElementById('vbt').textContent = 'Archived ' + snap.timestamp.replace(/(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})/, '$3/$2/$1 $4:$5') + ' UTC · Internet Archive';
+
+        // Load in iframe
+        var frame = document.getElementById('waybackFrame');
+        frame.src = waybackUrl;
+
+        // Detect if iframe loads or is blocked
+        var iframeTimer = setTimeout(function() {
+          // Fallback if iframe never loads
+          showViewerFallback(domain, waybackUrl);
+        }, 12000);
+
+        frame.onload = function() {
+          clearTimeout(iframeTimer);
+          try {
+            // If we can access contentDocument it loaded; if blocked, we get a security error
+            var doc = frame.contentDocument || frame.contentWindow.document;
+            if (!doc || doc.URL === 'about:blank') { showViewerFallback(domain, waybackUrl); return; }
+          } catch(e) {
+            // Cross-origin — actually means it loaded successfully (CORS blocks access, not loading)
+          }
+          document.getElementById('vld').style.display = 'none';
+          document.getElementById('vcont').style.display = 'block';
+          document.getElementById('waybackFrame').style.display = 'block';
+          document.getElementById('vcont-fallback').style.display = 'none';
+        };
+
+        frame.onerror = function() {
+          clearTimeout(iframeTimer);
+          showViewerFallback(domain, waybackUrl);
+        };
+
+      } else {
+        // No Wayback Machine snapshot found
+        showNoSnapshotFallback(url, domain);
+      }
+    })
+    .catch(function() {
+      showNoSnapshotFallback(url, domain);
+    });
+}
+
+function showViewerFallback(domain, waybackUrl) {
+  document.getElementById('vld').style.display = 'none';
+  document.getElementById('vcont').style.display = 'block';
+  document.getElementById('waybackFrame').style.display = 'none';
+  var fb = document.getElementById('vcont-fallback');
+  fb.style.display = 'block';
+  document.getElementById('vat').textContent = 'Preserved snapshot of ' + domain;
+  document.getElementById('vam').textContent = domain + ' blocks iframe embedding. Click below to view the real archived page.';
+  document.getElementById('waybackDirectLink').href = waybackUrl;
+}
+
+function showNoSnapshotFallback(url, domain) {
+  document.getElementById('vld').style.display = 'none';
+  document.getElementById('vcont').style.display = 'block';
+  document.getElementById('waybackFrame').style.display = 'none';
+  var fb = document.getElementById('vcont-fallback');
+  fb.style.display = 'block';
+  document.getElementById('vat').textContent = 'No snapshot found for ' + domain;
+  document.getElementById('vam').textContent = 'The Wayback Machine does not have a snapshot for this URL yet. Try archiving it again later.';
+  document.getElementById('waybackDirectLink').href = 'https://web.archive.org/web/*/' + encodeURIComponent(url);
+  document.getElementById('waybackDirectLink').textContent = 'Search Wayback Machine \u2197';
 }
 
 function buildVTl() {
