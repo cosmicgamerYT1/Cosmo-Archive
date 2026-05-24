@@ -1007,6 +1007,7 @@ if (FB) {
     if (u) {
       await loadUserProfile(u.uid);
       updateUserUI(u);
+      updateLandingNav();
       hideLoader();
       if (document.getElementById('vl').classList.contains('active')) {
         goTo('vd');
@@ -1058,7 +1059,7 @@ function doGoogle() {
       if (e.code === 'auth/popup-closed-by-user' || e.code === 'auth/cancelled-popup-request') {
         msg = 'Sign-in cancelled.';
       } else if (e.code === 'auth/unauthorized-domain') {
-        msg = 'Domain not authorised. Go to Firebase Console → Authentication → Settings → Authorised domains and add this domain.';
+        msg = 'Domain not authorised. Go to Firebase Console → Authentication → Settings → Authorised domains and add: cosmo-archive.wasmer.app';
       } else if (e.code === 'auth/operation-not-allowed') {
         msg = 'Google sign-in is not enabled. Go to Firebase Console → Authentication → Sign-in method → Google → Enable it.';
       } else if (e.code === 'auth/popup-blocked') {
@@ -1086,7 +1087,7 @@ document.getElementById('siForm').addEventListener('submit', function(e) {
   btn.disabled = true; btn.textContent = 'Signing in…';
   if (!FB) { demoLogin(em.split('@')[0], em); btn.disabled=false; btn.textContent='Sign in'; return; }
   auth.signInWithEmailAndPassword(em, pw)
-    .then(function() { closeAllM(); toast('Welcome back!','ok'); goTo('vd'); })
+    .then(function() { closeAllM(); toast('Welcome back!','ok'); updateLandingNav(); goTo('vd'); })
     .catch(function(e) {
       const msg = (e.code==='auth/user-not-found'||e.code==='auth/wrong-password'||e.code==='auth/invalid-credential')
         ? 'Incorrect email or password.' : e.message;
@@ -1121,7 +1122,7 @@ document.getElementById('suForm').addEventListener('submit', function(e) {
       });
       closeAllM();
       toast('Welcome to Cosmo Archives, '+nm+'!','ok');
-      goTo('vd');
+      updateLandingNav(); goTo('vd');
     })
     .catch(function(e) {
       const msg = e.code==='auth/email-already-in-use'
@@ -1472,14 +1473,78 @@ document.getElementById('saveNameBtn').addEventListener('click', async function(
 document.getElementById('settingsSignoutBtn').addEventListener('click', doSignOut);
 
 // ── ROUTING ──
+function updateLandingNav() {
+  const lnr = document.getElementById('lnr');
+  if (!lnr) return;
+  // Clear existing content
+  lnr.innerHTML = '';
+  if (CU) {
+    const name   = USER_PROFILE.displayName || CU.displayName || CU.email.split('@')[0];
+    const photo  = USER_PROFILE.photoURL || CU.photoURL || null;
+    const init   = name.split(' ').map(function(n){return n[0];}).join('').toUpperCase().slice(0,2);
+    const avatarBg = isOwner(CU) ? 'linear-gradient(135deg,#EF4444,#7C3AED)' : 'linear-gradient(135deg,var(--ac),#7C3AED)';
+
+    // Avatar chip — goes to dashboard on click
+    const chip = document.createElement('div');
+    chip.style.cssText = 'display:flex;align-items:center;gap:8px;padding:5px 12px 5px 5px;background:var(--el);border:1px solid var(--bo);border-radius:999px;cursor:pointer;transition:border-color .15s';
+    chip.onmouseenter = function(){ chip.style.borderColor='var(--ac)'; };
+    chip.onmouseleave = function(){ chip.style.borderColor='var(--bo)'; };
+    chip.addEventListener('click', function(){ goTo('vd'); });
+
+    const av = document.createElement('div');
+    av.style.cssText = 'width:28px;height:28px;border-radius:50%;background:'+avatarBg+';display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#000;overflow:hidden;flex-shrink:0';
+    if (photo) {
+      const img = document.createElement('img');
+      img.src = photo; img.alt = name;
+      img.style.cssText = 'width:100%;height:100%;object-fit:cover;border-radius:50%';
+      av.appendChild(img);
+    } else {
+      av.textContent = init;
+    }
+
+    const nameSpan = document.createElement('span');
+    nameSpan.textContent = name;
+    nameSpan.style.cssText = 'font-size:13px;font-weight:500;color:var(--tp);max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap';
+
+    chip.appendChild(av); chip.appendChild(nameSpan);
+
+    // Dashboard button
+    const dbBtn = document.createElement('button');
+    dbBtn.className = 'btn bp';
+    dbBtn.textContent = 'Dashboard →';
+    dbBtn.addEventListener('click', function(){ goTo('vd'); });
+
+    // Hamburger
+    const hb = document.createElement('button');
+    hb.className = 'hb'; hb.id = 'hb'; hb.innerHTML = '&#9776;';
+    hb.addEventListener('click', togMenu);
+
+    lnr.appendChild(chip); lnr.appendChild(dbBtn); lnr.appendChild(hb);
+  } else {
+    // Not signed in — default buttons
+    const sinBtn = document.createElement('button');
+    sinBtn.className = 'btn bg2'; sinBtn.textContent = 'Sign in';
+    sinBtn.addEventListener('click', function(){ openM('signin'); });
+
+    const supBtn = document.createElement('button');
+    supBtn.className = 'btn bp'; supBtn.textContent = 'Start for free';
+    supBtn.addEventListener('click', function(){ openM('signup'); });
+
+    const hb = document.createElement('button');
+    hb.className = 'hb'; hb.id = 'hb'; hb.innerHTML = '&#9776;';
+    hb.addEventListener('click', togMenu);
+
+    lnr.appendChild(sinBtn); lnr.appendChild(supBtn); lnr.appendChild(hb);
+  }
+}
+
 function dashLogoClick() {
-  // Go home but stay signed in — show landing with dashboard button in nav
-  showDashTab('archives'); // reset to archives tab
-  document.querySelector('.dmain').scrollTo(0,0);
+  // Go to landing page without signing out
+  document.querySelectorAll('.view').forEach(function(v) { v.classList.remove('active'); });
+  document.getElementById('vl').classList.add('active');
   window.scrollTo(0,0);
-  // If user wants to truly go to landing, they can use the landing page link
-  // For now just scroll dashboard to top
-  goTo('vd');
+  // Update the landing nav to show user chip if signed in
+  updateLandingNav();
 }
 
 function goTo(id) {
